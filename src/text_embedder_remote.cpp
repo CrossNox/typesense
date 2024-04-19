@@ -68,10 +68,10 @@ const std::string RemoteEmbedder::get_model_key(const nlohmann::json& model_conf
     }
 }
 
-OpenAIEmbedder::OpenAIEmbedder(const std::string& openai_model_path, const std::string& api_key, const size_t num_dims, const bool has_custom_dims, const std::string& openai_url) : api_key(api_key), openai_model_path(openai_model_path), 
+OpenAIEmbedder::OpenAIEmbedder(const std::string& openai_model_path, const std::string& api_key, const size_t num_dims, const bool has_custom_dims, const std::string& openai_url) : api_key(api_key), openai_model_path(openai_model_path),
                                                                                                                                                                                      num_dims(num_dims), has_custom_dims(has_custom_dims){
     if(openai_url.empty()) {
-        this->openai_url = "https://api.openai.com";
+        this->openai_url = "https://api.openai.com/v1";
     } else {
         this->openai_url = openai_url;
     }
@@ -79,12 +79,12 @@ OpenAIEmbedder::OpenAIEmbedder(const std::string& openai_model_path, const std::
 
 Option<bool> OpenAIEmbedder::is_model_valid(const nlohmann::json& model_config, size_t& num_dims) {
     auto validate_properties = validate_string_properties(model_config, {"model_name", "api_key"});
-    
+
     if (!validate_properties.ok()) {
         return validate_properties;
     }
 
-    const std::string openai_url = model_config.count("url") > 0 ? model_config["url"].get<std::string>() : "https://api.openai.com";
+    const std::string openai_url = model_config.count("url") > 0 ? model_config["url"].get<std::string>() : "https://api.openai.com/v1";
     auto model_name = model_config["model_name"].get<std::string>();
     auto api_key = model_config["api_key"].get<std::string>();
 
@@ -109,7 +109,7 @@ Option<bool> OpenAIEmbedder::is_model_valid(const nlohmann::json& model_config, 
 
     std::string embedding_res;
     headers["Content-Type"] = "application/json";
-    auto res_code = call_remote_api("POST", get_openai_create_embedding_url(openai_url), req_body.dump(), embedding_res, res_headers, headers);  
+    auto res_code = call_remote_api("POST", get_openai_create_embedding_url(openai_url), req_body.dump(), embedding_res, res_headers, headers);
 
 
     if(res_code == 408) {
@@ -277,7 +277,7 @@ GoogleEmbedder::GoogleEmbedder(const std::string& google_api_key) : google_api_k
 
 Option<bool> GoogleEmbedder::is_model_valid(const nlohmann::json& model_config, size_t& num_dims) {
     auto validate_properties = validate_string_properties(model_config, {"model_name", "api_key"});
-    
+
     if (!validate_properties.ok()) {
         return validate_properties;
     }
@@ -316,7 +316,7 @@ Option<bool> GoogleEmbedder::is_model_valid(const nlohmann::json& model_config, 
         if(json_res.count("error") == 0 || json_res["error"].count("message") == 0) {
             return Option<bool>(400, "Google API error: " + res);
         }
-        
+
         return Option<bool>(400, "Google API error: " + json_res["error"]["message"].get<std::string>());
     }
 
@@ -404,10 +404,10 @@ std::string GoogleEmbedder::get_model_key(const nlohmann::json& model_config) {
 }
 
 
-GCPEmbedder::GCPEmbedder(const std::string& project_id, const std::string& model_name, const std::string& access_token, 
-                         const std::string& refresh_token, const std::string& client_id, const std::string& client_secret) : 
+GCPEmbedder::GCPEmbedder(const std::string& project_id, const std::string& model_name, const std::string& access_token,
+                         const std::string& refresh_token, const std::string& client_id, const std::string& client_secret) :
         project_id(project_id), access_token(access_token), refresh_token(refresh_token), client_id(client_id), client_secret(client_secret) {
-    
+
     this->model_name = EmbedderManager::get_model_name_without_namespace(model_name);
 }
 
@@ -417,9 +417,9 @@ Option<bool> GCPEmbedder::is_model_valid(const nlohmann::json& model_config, siz
     if (!validate_properties.ok()) {
         return validate_properties;
     }
-    
+
     auto model_name = model_config["model_name"].get<std::string>();
-    auto project_id = model_config["project_id"].get<std::string>();    
+    auto project_id = model_config["project_id"].get<std::string>();
     auto access_token = model_config["access_token"].get<std::string>();
     auto refresh_token = model_config["refresh_token"].get<std::string>();
     auto client_id = model_config["client_id"].get<std::string>();
@@ -646,7 +646,7 @@ Option<std::string> GCPEmbedder::generate_access_token(const std::string& refres
     req_body = "grant_type=refresh_token&client_id=" + client_id + "&client_secret=" + client_secret + "&refresh_token=" + refresh_token;
 
     auto res_code = call_remote_api("POST", GCP_AUTH_TOKEN_URL, req_body, res, res_headers, headers);
-    
+
     if(res_code != 200) {
         nlohmann::json json_res;
         try {
